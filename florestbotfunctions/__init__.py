@@ -19,6 +19,8 @@ import cv2
 from yoloface import face_analysis
 from telethon.sync import TelegramClient
 from mcstatus import JavaServer, BedrockServer
+from g4f.client import Client, AsyncClient
+from g4f.Provider import OIVSCodeSer2
 
 class Cripto():
     """Класс со списком криптовалют, которые доступны для функции `crypto_price`.\nBITKOIN, USDT, DOGECOIN, HAMSTERCOIN"""
@@ -41,6 +43,7 @@ class FunctionsObject:
         self.speech_to_text_key = speech_to_text_key
         self.token_of_vk = vk_token
         self.detector = face_analysis()
+        self.client_for_gpt = Client()
         if all([rcon_ip, rcon_port, rcon_password]):
             from mcrcon import MCRcon
             self.rcon_server = MCRcon(rcon_ip, rcon_password, rcon_port)
@@ -832,6 +835,13 @@ class FunctionsObject:
                 return
         else:
             return
+    def gpt_4o_req(self, prompt: str, max_tokens: int = 4096, proxy: str = None):
+        """Фигня для доступа к GPT-4o-mini.\nprompt: сам запрос к нейронке.\nmax_tokens: количество символов в ответе. По умолчанию, 4096.\nproxy: прокси. По умолчанию, которые в FunctionsObject."""
+        if not proxy:
+            req = self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', OIVSCodeSer2(), proxy=self.proxies.get('http'), max_tokens=max_tokens)
+        else:
+            req = self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', OIVSCodeSer2(), proxy=proxy, max_tokens=max_tokens)
+        return req.choices[0].message.content
         
 class CodeEditor:
     """Редактор кода, написанный на Python с графическим интерфейсом и подсветкой ключевых слов при написании кода на Python.\nmaster: объект класса "Tk", встроенной библиотеки tkinter."""
@@ -1036,6 +1046,7 @@ class AsyncFunctionsObject:
         self.mail_passwd = mail_passwd
         self.speech_to_text_key = speech_to_text_key
         self.token_of_vk = vk_token
+        self.client_for_gpt = AsyncClient()
         if all([rcon_ip, rcon_password, rcon_port]):
             from aiomcrcon import Client
             self.rcon_server = Client(rcon_ip, rcon_port, rcon_password)
@@ -1689,6 +1700,14 @@ class AsyncFunctionsObject:
         else:
             await self.rcon_server.connect()
             return await self.rcon_server.send_cmd(command)
+        
+    async def gpt_4o_req(self, prompt: str, max_tokens: int = 4096, proxy: str = None):
+        """Фигня для доступа к GPT-4o-mini.\nprompt: сам запрос к нейронке.\nmax_tokens: количество символов в ответе. По умолчанию, 4096.\nproxy: прокси. По умолчанию, которые в FunctionsObject."""
+        if not proxy:
+            req = await self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', OIVSCodeSer2(), proxy=self.proxies.get('http'), max_tokens=max_tokens)
+        else:
+            req = await self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', OIVSCodeSer2(), proxy=proxy, max_tokens=max_tokens)
+        return req.choices[0].message.content
 class AsyncYandexParser:
     """Асинхронный парсер картинок с Яндекса.\nПоддерживаются только приватные HTTP(s) прокси с именем пользователя и паролем. Также требуется установка Google Chrome на машину.\nis_headless: скрывать окно с парсером?"""
 
