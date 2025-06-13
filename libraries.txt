@@ -32,3 +32,4 @@ openpyxl
 xlsxwriter
 colorama
 mcstatus
+aiohttp_socks
