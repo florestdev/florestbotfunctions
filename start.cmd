@@ -1,3 +1,3 @@
-python setup.py sdist bdist_wheel
-twine upload --repository pypi dist/*
+python -m build
+twine upload dist/* --disable-progress-bar
 pause
