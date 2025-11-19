@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""Привет!\nВ этой библиотеке Вы увидете некоторые функции [бота Флореста](https://t.me/postbotflorestbot).\nМои социальные сети: [тык](https://taplink.cc/florestone4185)"""
+"""Привет!\nВ этой библиотеке Вы увидите некоторые функции [бота Флореста](https://t.me/postbotflorestbot).\nМои социальные сети: [тык](https://taplink.cc/florestone4185)"""
 
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext
 import os, re
-import random
+import random, requests
 import aiohttp
 import asyncio
 import zipfile
@@ -20,7 +20,726 @@ from yoloface import face_analysis
 from telethon.sync import TelegramClient
 from mcstatus import JavaServer, BedrockServer
 from g4f.client import Client, AsyncClient
-from g4f.Provider import OIVSCodeSer2
+from g4f.Provider import OIVSCodeSer2, Blackbox, Chatai, LegacyLMArena, PollinationsAI, RetryProvider, ARTA, PollinationsImage
+from g4f.Provider import Together
+from phub import Client as PHClient, Quality
+from yt_dlp import YoutubeDL
+import torch
+from whisper import load_model
+from moviepy import VideoFileClip, TextClip, CompositeVideoClip
+import librosa
+from typing import Dict, Any, Optional, List
+import xml.etree.ElementTree as ET
+import feedparser
+from newspaper import Article
+
+class ArticleInfo:
+    def __init__(self, data: dict):
+        self.data = data
+    @property
+    def title(self):
+        """Заголовок статьи."""
+        return self.data.get('title')
+    @property
+    def text(self):
+        """Содержание статьи."""
+        return self.data.get('text')
+    @property
+    def top_image(self):
+        """Главное изображение на странице (ссылка)."""
+        return self.data.get('top_image')
+    def download_top_image(self):
+        """Скачивает изображение и возвращает в bytes."""
+        try:
+            r = requests.get(self.top_image, headers={"User-Agent":"Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:15.0) Gecko/20100101 Firefox/15.0.1"})
+            if r.status_code != 200:
+                return
+            else:
+                return r.content
+        except:
+            return
+
+class MinecraftServer:
+    """Информация о Minecraft-сервере."""
+
+    def __init__(self, data: dict):
+        self._data = data  # защищённый атрибут
+
+    # ====== Свойства ======
+
+    @property
+    def online(self) -> bool:
+        return self._data.get("online", False)
+
+    @property
+    def ip(self) -> str:
+        return self._data.get("ip", "—")
+
+    @property
+    def motd(self) -> str:
+        motd_data = self._data.get("motd", {}).get("clean", [])
+        return "\n".join(motd_data) if motd_data else "—"
+
+    @property
+    def version(self) -> str:
+        return self._data.get("version", "—")
+
+    @property
+    def software(self) -> str:
+        return self._data.get("software", "—")
+
+    @property
+    def map(self) -> str:
+        return self._data.get("map", "—")
+
+    @property
+    def players_online(self) -> int:
+        return self._data.get("players", {}).get("online", 0)
+
+    @property
+    def players_max(self) -> int:
+        return self._data.get("players", {}).get("max", 0)
+
+    @property
+    def players_list(self) -> list[str]:
+        return self._data.get("players", {}).get("list", [])
+
+    @property
+    def icon(self) -> str | None:
+        return self._data.get("icon")
+
+    # ====== Строковое представление ======
+
+    def __str__(self):
+        status = "🟢 Онлайн" if self.online else "🔴 Оффлайн"
+        return (
+            f"{status} — {self.ip}\n"
+            f"Версия: {self.version}\n"
+            f"Игроки: {self.players_online}/{self.players_max}\n"
+            f"MOTD: {self.motd}"
+        )
+
+
+class News:
+    def __init__(self, data: dict[str, str]):
+        self._data = data  # защищённый атрибут
+
+    # Название новости
+    @property
+    def title(self) -> str:
+        return self._data.get("title", "—")
+
+    # Ссылка на новость
+    @property
+    def link(self) -> str:
+        return self._data.get("link", "—")
+
+    # Дата публикации
+    @property
+    def published(self) -> str:
+        return self._data.get("published", "—")
+
+    # Краткое описание
+    @property
+    def description(self) -> str:
+        return self._data.get("description", "—")
+
+    # Строковое представление для печати
+    def __str__(self):
+        return f"{self.title} - {self.published}\n{self.link}"
+
+class SteamUser:
+    """
+    Класс для представления пользователя Steam на основе данных JSON, полученных, например, из Steam API.
+    
+    Attributes
+    ----------
+    data : dict
+        Исходные данные пользователя Steam в формате словаря.
+    """
+
+    def __init__(self, data: dict):
+        """
+        Инициализация объекта SteamUser.
+
+        Parameters
+        ----------
+        data : dict
+            Словарь с информацией о пользователе Steam.
+        """
+        self.data = data
+
+    @property
+    def steam_id64(self) -> str:
+        """64-битный SteamID пользователя."""
+        return self.data.get('steamID64')
+
+    @property
+    def steam_id(self) -> str:
+        """Псевдоним пользователя (логин в Steam)."""
+        return self.data.get('steamID')
+
+    @property
+    def online_state(self) -> str:
+        """Текущее состояние пользователя (online, offline, in-game и т.д.)."""
+        return self.data.get('onlineState')
+
+    @property
+    def state_message(self) -> str:
+        """Сообщение, связанное с состоянием пользователя (например, 'Offline', 'In-Game')."""
+        return self.data.get('stateMessage')
+
+    @property
+    def privacy_state(self) -> str:
+        """Статус приватности профиля (public, private и т.п.)."""
+        return self.data.get('privacyState')
+
+    @property
+    def visibility_state(self) -> int:
+        """Цифровое значение уровня видимости профиля."""
+        val = self.data.get('visibilityState')
+        return int(val) if val is not None and val.isdigit() else None
+
+    @property
+    def avatar_icon(self) -> str:
+        """URL иконки аватара (малый размер)."""
+        return self.data.get('avatarIcon')
+
+    @property
+    def avatar_medium(self) -> str:
+        """URL среднего размера аватара."""
+        return self.data.get('avatarMedium')
+
+    @property
+    def avatar_full(self) -> str:
+        """URL аватара полного размера."""
+        return self.data.get('avatarFull')
+
+    @property
+    def vac_banned(self) -> bool:
+        """True, если пользователь VAC-забанен."""
+        return self.data.get('vacBanned') == '1'
+
+    @property
+    def trade_ban_state(self) -> str:
+        """Состояние торгового бана (например, 'None', 'Probation' и т.д.)."""
+        return self.data.get('tradeBanState')
+
+    @property
+    def is_limited_account(self) -> bool:
+        """True, если аккаунт ограничен (например, из-за отсутствия покупок)."""
+        return self.data.get('isLimitedAccount') == '1'
+
+    @property
+    def custom_url(self) -> str:
+        """Пользовательский URL профиля (steamcommunity.com/id/...)."""
+        return self.data.get('customURL')
+
+    @property
+    def member_since(self) -> str:
+        """Дата регистрации пользователя в Steam."""
+        return self.data.get('memberSince')
+
+    @property
+    def steam_rating(self) -> float | None:
+        """Рейтинг Steam пользователя (может отсутствовать)."""
+        val = self.data.get('steamRating')
+        try:
+            return float(val) if val is not None else None
+        except ValueError:
+            return None
+
+    @property
+    def hours_played_2wk(self) -> float:
+        """Количество часов, сыгранных за последние 2 недели."""
+        val = self.data.get('hoursPlayed2Wk')
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return 0.0
+
+    @property
+    def headline(self) -> str:
+        """Краткий заголовок профиля (может быть None)."""
+        return self.data.get('headline')
+
+    @property
+    def location(self) -> str:
+        """Местоположение пользователя."""
+        return self.data.get('location')
+
+    @property
+    def realname(self) -> str:
+        """Настоящее имя пользователя."""
+        return self.data.get('realname')
+
+    @property
+    def summary(self) -> str:
+        """Описание профиля пользователя (HTML-теги <br> заменяются на перенос строки)."""
+        summary = self.data.get('summary', '')
+        return summary.replace('<br>', '\n') if summary else ''
+
+    def __str__(self) -> str:
+        """
+        Возвращает краткое текстовое представление пользователя.
+        """
+        return (
+            f"SteamUser({self.steam_id})\n"
+            f"Имя: {self.realname}\n"
+            f"Статус: {self.online_state} ({self.state_message})\n"
+            f"Профиль: https://steamcommunity.com/id/{self.custom_url}\n"
+            f"Регистрация: {self.member_since}\n"
+            f"Местоположение: {self.location}\n"
+            f"VAC бан: {'Да' if self.vac_banned else 'Нет'} | "
+            f"Ограничен: {'Да' if self.is_limited_account else 'Нет'}"
+        )
+
+class VkUser:
+    """ООП-модель пользователя ВКонтакте с доступом ко всем метаданным."""
+
+    def __init__(self, data: Dict[str, Any]):
+        self._data = data
+
+    # 🔹 Основные данные
+    @property
+    def id(self) -> int:
+        return self._data.get("id")
+
+    @property
+    def first_name(self) -> str:
+        return self._data.get("first_name", "")
+
+    @property
+    def last_name(self) -> str:
+        return self._data.get("last_name", "")
+
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}".strip()
+
+    @property
+    def domain(self) -> str:
+        return self._data.get("domain", "")
+
+    @property
+    def profile_url(self) -> str:
+        return f"https://vk.com/{self.domain or 'id' + str(self.id)}"
+
+    # 🔹 Демография
+    @property
+    def sex(self) -> str:
+        return {1: "женский", 2: "мужской"}.get(self._data.get("sex"), "не указан")
+
+    @property
+    def bdate(self) -> Optional[str]:
+        return self._data.get("bdate")
+
+    @property
+    def city(self) -> Optional[str]:
+        return self._data.get("city", {}).get("title")
+
+    @property
+    def country(self) -> Optional[str]:
+        return self._data.get("country", {}).get("title")
+
+    @property
+    def home_town(self) -> Optional[str]:
+        return self._data.get("home_town")
+
+    # 🔹 Социальные данные
+    @property
+    def followers(self) -> int:
+        return self._data.get("followers_count", 0)
+
+    @property
+    def status(self) -> str:
+        return self._data.get("status", "")
+
+    @property
+    def about(self) -> str:
+        return self._data.get("about", "")
+
+    @property
+    def relation(self) -> str:
+        relations = {
+            0: "не указано", 1: "не женат/не замужем", 2: "есть друг/подруга",
+            3: "помолвлен(а)", 4: "в браке", 5: "всё сложно",
+            6: "в активном поиске", 7: "влюблён(а)", 8: "в гражданском браке"
+        }
+        return relations.get(self._data.get("relation"), "не указано")
+
+    # 🔹 Контакты
+    @property
+    def mobile_phone(self) -> Optional[str]:
+        return self._data.get("mobile_phone")
+
+    @property
+    def home_phone(self) -> Optional[str]:
+        return self._data.get("home_phone")
+
+    @property
+    def site(self) -> Optional[str]:
+        return self._data.get("site")
+
+    @property
+    def photo(self) -> str:
+        return self._data.get("photo_max_orig", "")
+
+    # 🔹 Образование и работа
+    @property
+    def university(self) -> str:
+        return self._data.get("university_name", "")
+
+    @property
+    def faculty(self) -> str:
+        return self._data.get("faculty_name", "")
+
+    @property
+    def graduation(self) -> Optional[int]:
+        return self._data.get("graduation")
+
+    @property
+    def schools(self) -> List[Dict[str, Any]]:
+        return self._data.get("schools", [])
+
+    @property
+    def career(self) -> List[Dict[str, Any]]:
+        return self._data.get("career", [])
+
+    @property
+    def occupation(self) -> Optional[str]:
+        occ = self._data.get("occupation")
+        return occ.get("name") if occ else None
+
+    # 🔹 Интересы
+    @property
+    def interests(self) -> str:
+        return self._data.get("interests", "")
+
+    @property
+    def activities(self) -> str:
+        return self._data.get("activities", "")
+
+    @property
+    def music(self) -> str:
+        return self._data.get("music", "")
+
+    @property
+    def movies(self) -> str:
+        return self._data.get("movies", "")
+
+    @property
+    def books(self) -> str:
+        return self._data.get("books", "")
+
+    @property
+    def games(self) -> str:
+        return self._data.get("games", "")
+
+    @property
+    def quotes(self) -> str:
+        return self._data.get("quotes", "")
+
+    # 🔹 Приватные и доп. поля
+    @property
+    def personal(self) -> Dict[str, Any]:
+        return self._data.get("personal", {})
+
+    @property
+    def connections(self) -> Dict[str, Any]:
+        return self._data.get("connections", {})
+
+    # 🔹 Удобный вывод
+    def summary(self) -> str:
+        return (
+            f"👤 {self.full_name}\n"
+            f"Пол: {self.sex}\n"
+            f"Дата рождения: {self.bdate or '—'}\n"
+            f"Город: {self.city or '—'}, Страна: {self.country or '—'}\n"
+            f"Статус: {self.status}\n"
+            f"О себе: {self.about}\n"
+            f"Подписчиков: {self.followers}\n"
+            f"Профиль: {self.profile_url}"
+        )
+
+
+class ImageFormat:
+    """Введите формат изображения. Поддерживаются: `.jpg`, `.webp`, `.gif`, `.bmp`, `.png`."""
+    def __init__(self, format_: str):
+        """Введите формат изображения. Поддерживаются: `.jpg`, `.webp`, `.gif`, `.bmp`, `.png`."""
+        self.format_ = format_
+        if format_ in ['.jpg', '.webp', '.gif', '.bmp', '.png']:
+            return
+        else:
+            raise Exception("Неизвестный формат изображения.")
+
+class RTMPServerInit:
+    def __init__(self, url: str, key: str, user: str = None, password: str = None):
+        """Ну, короче, инициализация класса для rtmp_livestream().\nurl: ссылОЧКА на RTMP. Пример: `rtmp://live.twitch.tv/app`.\nkey: ключ потока.\nuser: имя пользователя. Нигде не используется.\npassword: пароль. Нигде не используется."""
+        self.key = key
+        self.user = user
+        self.password = password
+        if url.startswith('rtmps://'):
+            if not all([user, password]):
+                self.url = url
+            else:
+                self.url = url.replace('rtmps://', f'rtmps://{user}:{password}@')
+        else:
+            if not all([user, password]):
+                self.url = url
+            else:
+                self.url = url.replace('rtmp://', f'rtmp://{user}:{password}@')
+
+class FaceInfo:
+    def __init__(self, info: dict):
+        self.info = info
+    @property
+    def gender(self):
+        """Возвращаем пол человека на фотографии."""
+        return self.info.get('gender')
+    @property
+    def race(self):
+        """Возвращаем расу человека на фотографии."""
+        return self.info.get('race')
+    @property
+    def age(self):
+        """Возвращаем возраст человека на фотографии."""
+        return self.info.get('age')
+    @property
+    def emotion(self):
+        """Возвращаем эмоцию человека на фотографии."""
+        return self.info.get('emotion')
+
+class KworkOffer:
+    def __init__(self, data: dict):
+        self._data = data
+
+    # Основные свойства для прямого доступа к простым полям
+    @property
+    def id(self) -> int:
+        """ID оффера"""
+        return self._data.get('id', 0)
+
+    @property
+    def status(self) -> str:
+        """Статус оффера"""
+        return self._data.get('status', '')
+
+    @property
+    def name(self) -> str:
+        """Название оффера"""
+        return self._data.get('name', '')
+
+    @property
+    def description(self) -> str:
+        """Описание оффера"""
+        return self._data.get('description', '')
+
+    @property
+    def price_limit(self) -> float:
+        """Лимит цены"""
+        return float(self._data.get('priceLimit', '0.00'))
+
+    @property
+    def possible_price_limit(self) -> int:
+        """Возможный лимит цены"""
+        return self._data.get('possiblePriceLimit', 0)
+
+    @property
+    def max_days(self) -> int:
+        """Максимальная длительность выполнения в днях"""
+        return int(self._data.get('max_days', '0'))
+
+    @property
+    def time_left(self) -> str:
+        """Оставшееся время до истечения"""
+        return self._data.get('timeLeft', '')
+
+    @property
+    def is_active(self) -> bool:
+        """Активен ли оффер"""
+        return self._data.get('isWantActive', False)
+
+    @property
+    def is_archived(self) -> bool:
+        """Заархивирован ли оффер"""
+        return self._data.get('isWantArchive', False)
+
+    # Доступ к данным пользователя
+    @property
+    def user_id(self) -> int:
+        """ID пользователя"""
+        return self._data.get('user', {}).get('USERID', 0)
+
+    @property
+    def username(self) -> str:
+        """Имя пользователя"""
+        return self._data.get('user', {}).get('username', '')
+
+    @property
+    def user_profile_url(self) -> str:
+        """URL профиля пользователя"""
+        return self._data.get('wantUserGetProfileUrl', '')
+
+    # Доступ к датам
+    def get_date(self, date_type: str) -> str:
+        """
+        Получить дату из wantDates по типу (create, active, expire, reject)
+        """
+        return self._data.get('wantDates', {}).get(f'date{date_type.capitalize()}', '')
+
+    @property
+    def date_create(self) -> str:
+        """Дата создания оффера"""
+        return self.get_date('create')
+
+    @property
+    def date_active(self) -> str:
+        """Дата активации оффера"""
+        return self.get_date('active')
+
+    @property
+    def date_expire(self) -> str:
+        """Дата истечения оффера"""
+        return self.get_date('expire')
+
+    # Доступ к статусу (altStatusHint)
+    @property
+    def status_color(self) -> str:
+        """Цвет статуса"""
+        return self._data.get('altStatusHint', {}).get('color', '')
+
+    @property
+    def status_title(self) -> str:
+        """Название статуса"""
+        return self._data.get('altStatusHint', {}).get('title', '')
+
+    # Доступ к данным о бейджах пользователя
+    def get_user_badges(self) -> list[dict]:
+        """Список бейджей пользователя"""
+        return self._data.get('user', {}).get('badges', [])
+
+    @property
+    def user_badge_titles(self) -> list[str]:
+        """Список названий бейджей пользователя"""
+        return [badge.get('badge', {}).get('title', '') for badge in self.get_user_badges()]
+
+    # Доступ к статистике
+    @property
+    def wants_count(self) -> int:
+        """Количество офферов пользователя"""
+        return int(self._data.get('user', {}).get('data', {}).get('wants_count', '0'))
+
+    @property
+    def wants_hired_percent(self) -> int:
+        """Процент нанятых по офферам"""
+        return int(self._data.get('user', {}).get('data', {}).get('wants_hired_percent', '0'))
+
+    # Доступ к категориям и просмотрам
+    @property
+    def category_id(self) -> str:
+        """ID категории"""
+        return self._data.get('category_id', '')
+
+    @property
+    def views(self) -> int:
+        """Количество просмотров"""
+        return int(self._data.get('views_dirty', '0'))
+
+    # Доступ к доступным длительностям
+    @property
+    def available_durations(self) -> list[int]:
+        """Список доступных длительностей выполнения"""
+        return self._data.get('availableDurations', [])
+
+    # Метод для проверки, есть ли портфолио
+    @property
+    def has_portfolio(self) -> bool:
+        """Доступно ли портфолио"""
+        return self._data.get('hasPortfolioAvailable', False)
+    
+    @property
+    def url(self) -> str:
+        """Ссылка на кворк."""
+        return f'https://kwork.ru/projects/{self.id}'
+    
+    @property
+    def dictify(self) -> dict:
+        """Возвращаем словарь с кворком."""
+        return self._data
+
+class Resolution:
+    def __init__(self, data: dict):
+        self.data = data
+    @property
+    def height(self) -> int:
+        """Возвращает высоту изображения."""
+        return self.data.get('height')
+    @property
+    def width(self) -> int:
+        """Возвращает ширину изображения."""
+        return self.data.get('width')
+    @property
+    def orientation(self):
+        """Возвращает ориентацию.\n0 - горизонтальная, 1 - вертикальная, 2 - квадратная."""
+        if self.width > self.height:
+            return 0
+        elif self.width < self.height:
+            return 1
+        else:
+            return 2
+
+class YandexImage:
+    def __init__(self, image: dict):
+        self.image = image
+    def get_image(self) -> bytes:
+        """Изображение в байтах."""
+        return self.image.get('data')
+    def get_url(self) -> str:
+        """Ссылка на изображение."""
+        return self.image.get('url')
+    def get_resolution(self) -> Resolution:
+        """Возвращает высоту, ширину и ориентацию изображения."""
+        image = Image.open(io.BytesIO(self.get_image()))
+        resolution = image.size
+        return Resolution({"width":resolution[0], 'height':resolution[1]})
+    def get_size_mb(self):
+        """Возвращает размер картинки в MB."""
+        bytes_size = len(self.get_image()) 
+        mbs = bytes_size / (1024 * 1024)
+        return mbs
+    def get_format(self):
+        """Возвращает формат изображения."""
+        image = Image.open(io.BytesIO(self.get_image()))
+        return image.format.lower()
+    def download(self, dir: str, name: str = None):
+        """Просто скачаем локально.\ndir: директория. Если она не существует, мы создадим ее.\nname: имя изображения. Оно будет сгенерировано автоматически, если не указано."""
+        if not os.path.exists(dir):
+            os.mkdir(dir)
+        if name:
+            file = open(os.path.join(dir, f'{name}.jpg'), 'wb')
+            file.write(self.get_image())
+            file.close()
+        else:
+            r = random.random()
+            file = open(os.path.join(dir, f'{r}.jpg'), 'wb')
+            file.write(self.get_image())
+            file.close()
+
+class InitPornHubAccount:
+    """Класс для инициализации вашего аккаунта PornHub. Удобно и быстро.\nemail: введите почту, к которой привязан ваш аккаунт.\npassword: введите пароль от вашей учётной записи."""
+    def __init__(self, email: str, password: str):
+        """Класс для инициализации вашего аккаунта PornHub. Удобно и быстро.\nemail: введите почту, к которой привязан ваш аккаунт.\npassword: введите пароль от вашей учётной записи."""
+        self.email = email
+        self.password = password
+    @property
+    def get_user(self):
+        return self.email
+    
+    @property
+    def get_password(self):
+        return self.password
+        
 
 class Cripto():
     """Класс со списком криптовалют, которые доступны для функции `crypto_price`.\nBITKOIN, USDT, DOGECOIN, HAMSTERCOIN"""
@@ -30,8 +749,8 @@ class Cripto():
     HMSTR = 'hamster'
 
 class FunctionsObject:
-    def __init__(self, proxies: dict = {}, html_headers: dict = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36', 'Accept-Language': 'ru-RU'}, google_api_key: str = "", gigachat_key: str = "", gigachat_id: str = "", username_mail: str = "", mail_passwd: str = "", speech_to_text_key: str = None, vk_token: str = None, rcon_ip: str = None, rcon_port: int = None, rcon_password: str = None):
-        """Привет. Именно в данном классе находятся ВСЕ функции бота. Давай я объясню смысл параметров?\nproxies: прокси, которые используются при HTTPS запросах к сайтам.\nhtml_headers: заголовки HTTPS запросов.\ngoogle_api_key: апи ключ гугла. Получить его можно [здесь](https://console.google.com/)\ngigachat_key: ключ от GigaChat (ПАО "СберБанк")\ngigachat_id: ID от GigaChat.\nusername_mail: ваша электронная почта.\nmail_passwd: ваш API-ключ от SMTP сервера.\nspeech_to_text_key: API ключ от Google Speech To Text. Необязательно.\nvk_token: токен для работы с VK API от вашего аккаунта.\nrcon_ip: IP адрес сервера, к которому нужно подключиться.\nrcon_port: порт удаленного администрирования RCON, по умолчанию, 25575.\nrcon_password: пароль для доступа к RCON. Храните его в надежном месте."""
+    def __init__(self, proxies: dict = {}, html_headers: dict = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36', 'Accept-Language': 'ru-RU'}, google_api_key: str = "", gigachat_key: str = "", gigachat_id: str = "", username_mail: str = "", mail_passwd: str = "", speech_to_text_key: str = None, vk_token: str = None, rcon_ip: str = None, rcon_port: int = None, rcon_password: str = None, whisper_model: str = None):
+        """Привет. Именно в данном классе находятся ВСЕ функции бота. Давай я объясню смысл параметров?\nproxies: прокси, которые используются при HTTPS запросах к сайтам.\nhtml_headers: заголовки HTTPS запросов.\ngoogle_api_key: апи ключ гугла. Получить его можно [здесь](https://console.google.com/)\ngigachat_key: ключ от GigaChat (ПАО "СберБанк")\ngigachat_id: ID от GigaChat.\nusername_mail: ваша электронная почта.\nmail_passwd: ваш API-ключ от SMTP сервера.\nspeech_to_text_key: API ключ от Google Speech To Text. Необязательно.\nvk_token: токен для работы с VK API от вашего аккаунта.\nrcon_ip: IP адрес сервера, к которому нужно подключиться.\nrcon_port: порт удаленного администрирования RCON, по умолчанию, 25575.\nrcon_password: пароль для доступа к RCON. Храните его в надежном месте.\nwhisper_model: модель для распознаватора речи и создания субтитров. К примеру, tiny."""
         print(f'Объект класса был успешно запущен.')
         self.proxies = proxies
         self.headers = html_headers
@@ -42,14 +761,18 @@ class FunctionsObject:
         self.mail_passwd = mail_passwd
         self.speech_to_text_key = speech_to_text_key
         self.token_of_vk = vk_token
-        self.detector = face_analysis()
         self.client_for_gpt = Client()
+        self.detector = face_analysis()
         if all([rcon_ip, rcon_port, rcon_password]):
             from mcrcon import MCRcon
             self.rcon_server = MCRcon(rcon_ip, rcon_password, rcon_port)
             print(f'RCON сервер инициализирован и готов к запуску.')
         else:
             self.rcon_server = None
+        if whisper_model:
+            self.whisper = load_model(whisper_model, torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu'))
+        else:
+            self.whisper = None
     def generate_image(self, prompt: str) -> bytes:
         """Данная функция генерирует картинки с помощью GigaChat.\nprompt: запрос, по которому надо сгенерировать изображение."""
         import requests, re, urllib3
@@ -208,6 +931,7 @@ class FunctionsObject:
     def download_video(self, url: str):
         """Данная функция качает видео с YouTube с помощью URL.\nurl: ссылка на видео."""
         from pytubefix import YouTube
+        from tqdm import tqdm as sync_tqdm
 
         yt_obj = YouTube(url, proxies=self.proxies)
 
@@ -215,15 +939,19 @@ class FunctionsObject:
             return 'На видео наложены возрастные ограничения.'    
         else:
             import io
-
             buffer = io.BytesIO()
-
-            yt_obj.streams.get_lowest_resolution().stream_to_buffer(buffer)
-
+            stream = yt_obj.streams.get_lowest_resolution()
+            pbar = sync_tqdm(total=stream.filesize, desc=f'Скачивание "{yt_obj.title}"..', unit='B', unit_scale=True, dynamic_ncols=True)
+            def progress(stream, chunk, bytes_remaining):
+                pbar.update(len(chunk)) # Обновление прогресс-бар
+            yt_obj.register_on_progress_callback(progress)
+            stream.stream_to_buffer(buffer)
+            pbar.close()
             return buffer.getvalue()
     def search_videos(self, query: str):
         """Функция для поиска видео по запросу и дальнейшего его закачивания.\nquery: запрос, по которому надо искать видео."""
         from pytubefix import Search
+        from tqdm import tqdm as sync_tqdm
 
         search = Search(query, proxies=self.proxies)
         videos = search.videos
@@ -236,11 +964,14 @@ class FunctionsObject:
                 return 'На видео, которое мы нашли первым присутствуют возрастные ограничение. Его скачивание невозможно.'  
             else:
                 import io
-
                 buffer = io.BytesIO()
-
-                video.streams.get_lowest_resolution().stream_to_buffer(buffer)
-
+                stream = video.streams.get_lowest_resolution()
+                pbar = sync_tqdm(total=stream.filesize, desc=f'Скачивание "{video.title}"..', unit='B', unit_scale=True, dynamic_ncols=True)
+                def progress(stream, chunk, bytes_remaining):
+                    pbar.update(len(chunk)) # Обновление прогресс-бара
+                video.register_on_progress_callback(progress)
+                stream.stream_to_buffer(buffer)
+                pbar.close()
                 return buffer.getvalue()
     def create_demotivator(self, top_text: str, bottom_text: str, photo: bytes, font: str):
         """Создайте демотиватор с помощью данной фичи!\ntop_text: верхний текст.\nbottom_text: нижний текст.\nphoto: ваша фотография в bytes.\nfont: ваш шрифт. Пример: `times.ttf`."""
@@ -811,38 +1542,558 @@ class FunctionsObject:
                 img_pil.save(output, format='JPEG')
                 print(f'Готово!')
                 return output.getvalue()
-    def minecraft_server_info(self, ip: str, port: int = None, type_: str = 'java'):
-        """Информация о Minecraft-сервере.\nip: ip/host сервера, или домен. Также можно написать ip:port.\nport: порт сервера, необязателен.\ntype: java, или bedrock."""
-        if type_ in ['java', 'bedrock']:
-            try:
-                if type_ == 'java':
-                    if not port:
-                        server = JavaServer(ip)
-                    else:
-                        server = JavaServer(ip, port)
-                    latency = server.ping()
-                    query = server.query()
-                    status = server.status()
-                    return {"latency":latency, 'query':{"query_motd":query.motd.to_ansi(), 'query_map':query.map, 'query_players_count':query.players.online, 'query_players_max':query.players.max, 'all_info':query.as_dict()}, 'status':{"query_motd":status.motd.to_ansi(), 'description':status.description, 'icon_of_server_base64':status.icon, 'query_players_count':query.players.online, 'query_players_max':query.players.max, 'version':status.version.name, 'all_info':status.as_dict()}}
-                else:
-                    if not port:
-                        server = BedrockServer(ip)
-                    else:
-                        server = BedrockServer(ip, port)
-                    status = server.status()
-                    return {"status":status.as_dict()}
-            except:
-                return
+    def minecraft_server_info(self, ip: str):
+        """Информация о Minecraft-сервере.
+        ip: IP/host сервера, или домен. Также можно написать ip:port.
+        """
+        try:
+            url = f"https://api.mcsrvstat.us/3/{ip}"
+            req = requests.get(url, headers=self.headers, proxies=self.proxies, timeout=5)
+
+            if req.status_code != 200:
+                print(f"❌ Ошибка: сервер API вернул код {req.status_code}.")
+                return None
+
+            data = req.json()
+
+            if not data.get("online", False):
+                print("🔴 Сервер оффлайн или не отвечает.")
+                return None
+
+            return MinecraftServer(data)
+
+        except requests.RequestException as e:
+            print(f"⚠️ Ошибка сети: {e}")
+            return None
+        except ValueError:
+            print("⚠️ Некорректный ответ от API (не JSON).")
+            return None
+
+    def gpt_4o_req(self, prompt: str, max_tokens: int = 4096, proxy: str = None, image: bytes = None):
+        """Фигня для доступа к GPT-4o-mini.\nprompt: сам запрос к нейронке.\nmax_tokens: количество символов в ответе. По умолчанию, 4096.\nproxy: прокси. По умолчанию, которые в FunctionsObject.\nimage: изображение в bytes. Для описания объектов на фото."""
+        if not image:
+            if not proxy:
+                req = self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', RetryProvider([Together, OIVSCodeSer2, Blackbox, Chatai, LegacyLMArena, PollinationsAI]), proxy=self.proxies.get('http'), max_tokens=max_tokens, web_search=True)
+            else:
+                req = self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', RetryProvider([Together, OIVSCodeSer2, Blackbox, Chatai, LegacyLMArena, PollinationsAI]), proxy=proxy, max_tokens=max_tokens, web_search=True)
+            return req.choices[0].message.content
         else:
-            return
-    def gpt_4o_req(self, prompt: str, max_tokens: int = 4096, proxy: str = None):
-        """Фигня для доступа к GPT-4o-mini.\nprompt: сам запрос к нейронке.\nmax_tokens: количество символов в ответе. По умолчанию, 4096.\nproxy: прокси. По умолчанию, которые в FunctionsObject."""
-        if not proxy:
-            req = self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', OIVSCodeSer2(), proxy=self.proxies.get('http'), max_tokens=max_tokens)
+            if not proxy:
+                req = self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', PollinationsAI, proxy=self.proxies.get('http'), max_tokens=max_tokens, web_search=True, image=image)
+            else:
+                req = self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', PollinationsAI, proxy=proxy, max_tokens=max_tokens, web_search=True, image=image)
+            return req.choices[0].message.content
+    def flux_pro_gen(self, prompt: str, proxy: str = None):
+        """Для генерации более лучших картинок через flux-pro.\nprompt: запрос для нейросети.\nproxy: прокси. По умолчанию, которые в настройках класса (если есть)."""
+        if proxy:
+            img = self.client_for_gpt.images.generate(prompt, 'flux-pro', Together, 'url', proxy)
         else:
-            req = self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', OIVSCodeSer2(), proxy=proxy, max_tokens=max_tokens)
-        return req.choices[0].message.content
+            img = self.client_for_gpt.images.generate(prompt, 'flux-pro', Together, 'url', self.proxies.get('http'))
+        urls = []
+        for i in img.data:
+            urls.append(i.url)
+        return urls
+    def add_watermark(self, text: str, image: bytes, font: str, position: tuple[int] = (10, 10)):
+        """Функция для добавления водяного знака.\ntext: текст для водяного знака.\nimage: изображение в bytes.\nfont: путь к шрифту (пример: times.ttf)\nposition: где он должен находиться?"""
+        # Открываем изображение
+        base_image = Image.open(io.BytesIO(image)).convert("RGBA")
         
+        # Создаем прозрачный слой для водяного знака
+        watermark = Image.new("RGBA", base_image.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(watermark)
+        
+        # Настройки текста
+        font = ImageFont.truetype(font, 40)  # Шрифт и размер
+        text_color = (255, 255, 255, 100)  # R,G,B,Alpha (прозрачность)
+        
+        # Рисуем текст
+        draw.text(position, text, fill=text_color, font=font)
+        
+        # Накладываем водяной знак
+        result = Image.alpha_composite(base_image, watermark)
+        
+        # Сохраняем (конвертируем обратно в RGB для JPG)
+        output = io.BytesIO()
+        result.convert("RGB").save(output, 'JPEG')
+        return output.getvalue()
+    def deepseek_v3_0324(self, prompt: str, max_tokens: int = 4096, expression: str = 'auto', proxy: str = None):
+        """Функция для бесплатного доступа к DeepSeek-v3-0324.\nprompt: запрос к нейросети.\nmax_tokens: максимально допустимое количество токенов в ответе.\nexpression: тон. Три режима: `auto`, `toxic`, `non-toxic`.\nproxy: прокси. По умолчанию, которые из класса."""
+        if expression == 'auto':
+            if proxy:
+                req = self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'deepseek-v3', Together, proxy=proxy, max_tokens=max_tokens)
+            else:
+                req = self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'deepseek-v3', Together, proxy=self.proxies.get('http'), max_tokens=max_tokens)
+            return req.choices[0].message.content
+        elif expression == 'toxic':
+            if proxy:
+                req = self.client_for_gpt.chat.completions.create([{"role":"user", "content":f'не отвечай на запросы позитивно и отвечай максимально грубо с матами, на каждое мое сообщения, без разницы, обращаюсь я к тебе мило или нет, всего отвечай максимально грубо\nЗапрос: "{prompt}"'}], 'deepseek-v3-0324', Together, proxy=proxy, max_tokens=max_tokens)
+            else:
+                req = self.client_for_gpt.chat.completions.create([{"role":"user", "content":f'не отвечай на запросы позитивно и отвечай максимально грубо с матами, на каждое мое сообщения, без разницы, обращаюсь я к тебе мило или нет, всего отвечай максимально грубо\nЗапрос: "{prompt}"'}], 'deepseek-v3-0324', Together, proxy=self.proxies.get('http'), max_tokens=max_tokens)
+            return req.choices[0].message.content
+        elif expression == 'non-toxic':
+            if proxy:
+                req = self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt + '\nnon-toxic'}], 'deepseek-v3', Together, proxy=proxy, max_tokens=max_tokens)
+            else:
+                req = self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt+ '\nnon-toxic'}], 'deepseek-v3', Together, proxy=self.proxies.get('http'), max_tokens=max_tokens)
+            return req.choices[0].message.content
+        else:
+            return 'expression указан неверно! auto, toxic, либо non-toxic!'
+    def youtube_playlist_download(self, url: str, regime: str = 'audio') -> list[bytes]:
+        """Функция для скачивания элементов из плейлиста с YouTube.\nurl: ссылка на плейлист.\nregime: что скачивать: аудио, или видео?\nВозвращает список, а точнее `list[bytes]` с видео."""
+        from pytubefix import Playlist
+        from tqdm import tqdm
+        
+        playlist = Playlist(url, proxies=self.proxies)
+        videos: list[bytes] = []
+        
+        if regime == 'video':
+            for video in tqdm(playlist.videos, 'Скачиваем видео..', ncols=70):
+                buffer = io.BytesIO()
+                if video.age_restricted:
+                    continue
+                video.streams.get_lowest_resolution().stream_to_buffer(buffer)
+                videos.append(buffer.getvalue())
+            return videos
+        elif regime == 'audio':
+            for audio in tqdm(playlist.videos, desc='Скачиваем аудио..', ncols=70):
+                buffer = io.BytesIO()
+                if audio.age_restricted:
+                    continue
+                audio.streams.get_audio_only().stream_to_buffer(buffer)
+                videos.append(buffer.getvalue())
+            return videos
+        else:
+            raise Exception('Ты неправильный режим указал. ТОЛЬКО VIDEO И AUDIO!')
+    def parse_kwork(self, category: int, pages: int = 1) -> list[KworkOffer]:
+        """Функция для парсинга объявлений на kwork.\ncategory: категория для парсинга.\npages: сколько страниц спарсить? По умолчанию, 1.\nВозвращает список с кворками."""
+        import requests, json
+        from bs4 import BeautifulSoup
+        
+        offers: list[KworkOffer] = []
+        
+        for p in tqdm(range(1, pages + 1), desc='Парсинг..'):
+            response = requests.get('https://kwork.ru/projects', params={"c": category, "page":p}, proxies=self.proxies)
+            response.raise_for_status()
+
+            soup = BeautifulSoup(response.text, "html.parser")
+
+            if not soup.head:
+                raise Exception
+
+            scripts = soup.head.find_all("script")
+            js_script = ""
+            for script in scripts:
+                if script.text.startswith("window.ORIGIN_URL"):
+                    js_script = script.text
+                    break
+
+            start_pointer = 0
+            json_data = ""
+            in_literal = False
+            for current_pointer in range(len(js_script)):
+                if js_script[current_pointer] == '"' and js_script[current_pointer - 1] != "\\":
+                    in_literal = not in_literal
+                    continue
+
+                if in_literal or js_script[current_pointer] != ";":
+                    continue
+
+                line = js_script[start_pointer:current_pointer].strip()
+                if line.startswith("window.stateData"):
+                    json_data = line[17:]
+                    break
+
+                start_pointer = current_pointer + 1
+
+            data = json.loads(json_data)
+
+            for raw_kwork in data["wantsListData"]["wants"]:
+                offer = KworkOffer(raw_kwork)
+                offers.append(offer)
+        return offers
+    def info_about_faces_on_photo(self, photo: bytes):
+        """Данная функция выдает информацию о человеке на фотографии, или о людях.\nphoto: принимает фотографию в байтах.\nВозвращает `list[FaceInfo]` при наличии людей на фотографии.\nДЛЯ ДАННОЙ ФУНКЦИИ ЖЕЛАТЕЛЬНО ИМЕТЬ ПРОЦЕССОР С ПОДДЕРЖКОЙ AVX-AVX2 ИНСТРУКЦИЙ. ЕСЛИ ВЫЛАЗИТ ОШИБКА - ИСПОЛЬЗУЙТЕ ПАТЧ ДЛЯ TENSORFLOW."""
+        from deepface import DeepFace
+        from base64 import b64encode
+        
+        faces: list[FaceInfo] = []
+        
+        analysis = DeepFace.analyze(b64encode(photo).decode(), ['emotion', 'age', 'gender', 'race'])
+        
+        for face in tqdm(analysis, 'Обрабатываем лица..', total=len(analysis), ncols=70):
+            faces.append(face)
+        
+        if faces:
+            return faces
+    def rtmp_livestream(self, video: bytes, server: RTMPServerInit, ffmpeg_dir: str = 'ffmpeg', resolution: str = '1280x720', bitrate: str = '3000k', fps: str = '30'):
+        """Стримит видео из байтов на RTMPS-сервер с FFmpeg под CPU. Требует FFmpeg."""
+        from tqdm import tqdm as tqdm_sync
+        try:
+            # Команда для FFmpeg
+            command = [
+                ffmpeg_dir,
+                '-re',  # Реальное время
+                '-f', 'mp4',  # Формат входных данных
+                '-i', '-',  # Вход из пайпа
+                '-c:v', 'libx264',  # Кодек под CPU
+                '-preset', 'ultrafast',  # Минимальная задержка
+                '-tune', 'zerolatency',  # Для стриминга
+                '-b:v', bitrate,  # Битрейт
+                '-s', resolution,  # Разрешение
+                '-r', fps,  # FPS
+                '-f', 'flv',  # Формат выхода
+                f'{server.url}/{server.key}'  # RTMPS URL с логином/паролем
+            ]
+            
+            # Прогресс-бар
+            total_size = len(video)
+            with tqdm_sync(total=total_size, unit='B', unit_scale=True, desc="Стриминг на RTMPS..") as pbar:
+                process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+                video_buffer = io.BytesIO(video)
+                
+                # Отправка байтов в пайп
+                chunk_size = 8192
+                while True:
+                    chunk = video_buffer.read(chunk_size)
+                    if not chunk:
+                        break
+                    process.stdin.write(chunk)
+                    pbar.update(len(chunk))
+                
+                process.stdin.close()
+                process.wait()
+                
+                # Проверка ошибок
+                stderr_output = process.stderr.read().decode('utf-8')
+                if process.returncode != 0:
+                    print(f"FFmpeg ошибка: {stderr_output}")
+                    raise RuntimeError(f"FFmpeg завершился с ошибкой: {stderr_output}")
+            
+            print(f"Сигма-стрим завершён! 😎")
+        except Exception as e:
+            print(f"Ошибка стриминга: {e}")
+            raise
+    def cut_link(self, url: str, proxies: dict[str, str] = None) -> str:
+        """Взаимодействие с API сервиса для сокращения ссылок `clck.ru`.\nurl: ссылка на сокращение.\nproxies: прокси, если нет, то они берутся с класса.\nВозвращает ссылку в `str`."""
+        request = requests.get(f'https://clck.ru/--', params={"url":url}, headers=self.headers, proxies=proxies if proxies else self.proxies)
+        if request.text != 'limited':
+            return request.text
+        else:
+            time.sleep(2.5)
+            request = requests.get(f'https://clck.ru/--', params={"url":url}, headers=self.headers, proxies=proxies if proxies else self.proxies)
+            return request.text
+    def detect_new_kworks(self, func, category: int = 11, pages: int = 1, delay: int = 300):
+        """Привет! Эта функция - враппер для отслеживания новых предложений на бирже Kwork.\nЮЗАЙТЕ В КАЧЕСТВЕ ДЕКОРАТОРА."""
+        def wrapper(*args, **kwargs):
+            start_kworks = self.parse_kwork(category, pages)
+            new = []
+            
+            for i in start_kworks:
+                new.append(i.url)
+                
+            while True:
+                new_kworks = self.parse_kwork(category, pages)
+                for kwork in new_kworks:
+                    if kwork.url in new:
+                        pass
+                    else:
+                        new.append(kwork.url)
+                        func(kwork)
+                time.sleep(delay)
+        return wrapper
+    def download_tiktok_video(self, url: str, dir: str, filename: str = None, youtube_dl_parameters: dict = None) -> dict:
+        """Скачивает видео в указанную директорию. Возвращает информацию о видео.\nurl: ссылка на видео.\ndir: директория, куда сохранить видео.\nfilename: имя файла. По умолчанию, будет сгенерировано нами.\nyoutube_dl_parameters: мы сами настроили параметры yt-dlp. Знайте, что делаете."""
+        if not os.path.exists(dir):
+            os.mkdir(dir)
+        
+        if filename:
+            ydl_opts = {
+                'outtmpl': os.path.join(dir, f'{filename}.%(ext)s'),  # Шаблон имени файла
+                'format': 'mp4',  # Формат видео
+                'noplaylist': True, 
+                'format': 'worst',
+                'proxy':self.proxies.get('http'),
+            }
+        else:
+            name_of_file = random.random()
+            ydl_opts = {
+                'outtmpl': os.path.join(dir, f'{name_of_file}.%(ext)s'),  # Шаблон имени файла
+                'format': 'mp4',  # Формат видео
+                'noplaylist': True, 
+                'format': 'worst',
+                'proxy':self.proxies.get('http'),
+            }
+        if youtube_dl_parameters:
+            with YoutubeDL(youtube_dl_parameters) as downloader:
+                info = downloader.extract_info(url, False)
+                downloader.download([url])
+                return info
+        else:
+            with YoutubeDL(ydl_opts) as downloader:
+                info = downloader.extract_info(url, False)
+                downloader.download([url])
+                return info
+    def twitch_clips_download(self, url: str, dir: str, filename: str = None, youtube_dl_parameters: dict = None) -> dict:
+        """Функция для скачивания клипов с Twitch!\nurl: ссылка на твитч-клип.\ndir: куда сохранить?\nfilename: имя файла при скачивании.\nyoutube_dl_parameters: параметры YoutubeDL."""
+        if not url.startswith(('https://m.twitch.tv/twitch/clip/', 'https://twitch.tv/twitch/clip/')):
+            raise Exception('Брат! Ты неправильный формат ссылки указал.')
+        else:
+            if not os.path.exists(dir):
+                os.mkdir(dir)
+        
+            if filename:
+                ydl_opts = {
+                    'outtmpl': os.path.join(dir, f'{filename}.%(ext)s'),  # Шаблон имени файла
+                    'format': 'mp4',  # Формат видео
+                    'noplaylist': True, 
+                    'format': 'worst',
+                    'proxy':self.proxies.get('http'),
+                }
+            else:
+                name_of_file = random.random()
+                ydl_opts = {
+                    'outtmpl': os.path.join(dir, f'{name_of_file}.%(ext)s'),  # Шаблон имени файла
+                    'format': 'mp4',  # Формат видео
+                    'noplaylist': True, 
+                    'format': 'worst',
+                    'proxy':self.proxies.get('http'),
+                }
+            if youtube_dl_parameters:
+                with YoutubeDL(youtube_dl_parameters) as downloader:
+                    info = downloader.extract_info(url, False)
+                    downloader.download([url])
+                    return info
+            else:
+                with YoutubeDL(ydl_opts) as downloader:
+                    info = downloader.extract_info(url, False)
+                    downloader.download([url])
+                    return info
+    def vk_rutube_dzen_video_download(self, url: str, dir: str, filename: str = None, youtube_dl_parameters: dict = None):
+        """Функция по скачиванию видео ВК, Рутуба и Дзена!\nПараметры, как везде. Разберетесь."""
+        if not url.startswith(('https://rutube.ru/video/', 'https://vk.com/vkvideo', 'https://dzen.ru/video/watch/', 'https://zen.yandex.ru/video/watch/')):
+            raise Exception('Брат! Ты неправильный формат ссылки указал.')
+        else:
+            if not os.path.exists(dir):
+                os.mkdir(dir)
+        
+            if filename:
+                ydl_opts = {
+                    'outtmpl': os.path.join(dir, f'{filename}.%(ext)s'),  # Шаблон имени файла
+                    'format': 'mp4',  # Формат видео
+                    'noplaylist': True, 
+                    'format': 'worst',
+                    'proxy':self.proxies.get('http'),
+                }
+            else:
+                name_of_file = random.random()
+                ydl_opts = {
+                    'outtmpl': os.path.join(dir, f'{name_of_file}.%(ext)s'),  # Шаблон имени файла
+                    'format': 'mp4',  # Формат видео
+                    'noplaylist': True, 
+                    'format': 'worst',
+                    'proxy':self.proxies.get('http'),
+                }
+            if youtube_dl_parameters:
+                with YoutubeDL(youtube_dl_parameters) as downloader:
+                    info = downloader.extract_info(url, False)
+                    downloader.download([url])
+                    return info
+            else:
+                with YoutubeDL(ydl_opts) as downloader:
+                    info = downloader.extract_info(url, False)
+                    downloader.download([url])
+                    return info
+    def unpack_zip_jar_apk_others(self, file, dir: str, delete_original: bool = False):
+        """"Функция для распаковки любых архивов. Даже Jar (Java Archive) и APK.\nfile: файл в io.BytesIO(), или директория к нему.\ndir: место для распаковки.\ndelete_original: удалять оригинальный файл? (Работает только с указанием директории в file)\nФункция возвращает None."""
+        from zipfile import ZipFile
+
+        if not os.path.exists(dir):
+            os.mkdir(dir)
+
+        zipfile = ZipFile(file, 'r')
+        zipfile.extractall(dir)
+        zipfile.close() 
+        if delete_original:
+            if isinstance(file, str):
+                try:
+                    os.remove(file)
+                except:
+                    pass
+            else:
+                pass
+    def photo_upscale(self, image: bytes, factor: int = 4) -> bytes:
+        """Функция для простого апскейла фото через Pillow (бикубический метод).\nimage: фото в bytes.\nfactor: во сколько раз увеличивать фото (width и height).\nВозвращает bytes."""
+        img = Image.open(io.BytesIO(image))
+        original_width, original_height = img.size
+
+        new_width = int(original_width * factor)
+        new_height = int(original_height * factor)
+
+        upscaled = img.resize((new_width, new_height), Image.Resampling.BICUBIC)
+        new = io.BytesIO()
+        upscaled.save(new, 'JPEG')
+        return new.getvalue()
+    def generate_video_with_subtitles(self, path, output_path: str, output_name: str = None, font: str = None, language: str = 'ru'):
+        """Видео для генерации этого же видео, но с субтитрами.\npath: прямой путь к исходному файлу.\noutput_path: куда сохранить новый файл.\noutput_name: будет автоматически создано, если не указано.\nfont: путь к шрифту, если есть.\nlanguage: исходный язык в видео.\n\nПОДДЕРЖИВАЕТСЯ НАТИВНО ТОЛЬКО .mp4!"""
+        if not self.whisper:
+            raise Exception("Укажи whisper_model при инициализации класса.")
+        else:
+            video = VideoFileClip(path)
+            random_ = random.random()
+            video.audio.write_audiofile(os.path.join(path, f'{random_}.wav'))
+            audio_data, sample_rate = librosa.load(os.path.join(path, f'{random_}.wav'), sr=16000)  # Whisper ожидает частоту 
+            result = self.whisper.transcribe(audio_data, word_timestamps=True, language=language)
+            clips = [video]
+            for segment in result["segments"]:
+                for word_info in segment.get("words", []):
+                    word = word_info["word"]
+                    start_time = word_info["start"]
+                    end_time = word_info["end"]
+
+                    subtitle = TextClip(
+                        text=word,
+                        font_size=24,
+                        color='white',
+                        bg_color='black',
+                        font=font,
+                        size=(video.w, 100),
+                        text_align='center'
+                    ).with_start(start_time).with_end(end_time).with_position(('center', video.h - 120))
+
+                    clips.append(subtitle)
+            final_video = CompositeVideoClip(clips)
+            os.remove(os.path.join(path, f'{random_}.wav'))
+            if output_name:
+                final_video.write_videofile(os.path.join(output_path, f'{output_name}.mp4'), codec="libx264", audio_codec="aac")
+            else:
+                final_video.write_videofile(os.path.join(output_path, f'{random_}.mp4'), codec="libx264", audio_codec="aac")
+    def change_format_of_photo(self, image: bytes, format_: ImageFormat):
+        """Функция для преобразования изображений в нужный формат.\nimage: изображения в bytes.\nformat_: формат изображения, указанный конкретным классом."""
+        PIL_FORMATS_MAP = {
+            '.jpg': 'JPEG', '.jpeg': 'JPEG',
+            '.png': 'PNG',
+            '.bmp': 'BMP',
+            '.gif': 'GIF',
+            '.webp': 'WEBP'
+        }
+        selected_format_pil = PIL_FORMATS_MAP.get(format_.format_.lower())
+        img = Image.open(io.BytesIO(image))
+
+        # --- Логика Конвертации Изображения ---
+        output_buffer = io.BytesIO()
+
+        # Pillow может требовать преобразования цветового пространства для некоторых форматов
+        if selected_format_pil == 'JPEG' and img.mode in ('RGBA', 'P'):
+            img = img.convert('RGB')
+        # Для GIF, если нужно сохранить анимацию, потребуется более сложная обработка.
+        # Здесь мы просто сохраним первый кадр или как обычное изображение.
+        elif selected_format_pil == 'GIF':
+            # Простая обработка GIF: сохранение первого кадра
+            img.save(output_buffer, format=selected_format_pil)
+        else:
+            img.save(output_buffer, format=selected_format_pil)
+
+        output_buffer.seek(0) # Перематываем буфер в начало
+        converted_image_data = output_buffer.read()
+        return converted_image_data
+    def get_vk_user(self, user_id: str) -> Optional[VkUser]:
+        """Получает объект пользователя VkUser по user_id или @username."""
+        if not self.token_of_vk:
+            raise Exception("Дружок! Токен укажи от своего VK ID.")
+        fields = (
+            "bdate,sex,city,country,home_town,photo_max_orig,"
+            "followers_count,relation,contacts,domain,site,status,about,"
+            "education,schools,universities,occupation,career,interests,"
+            "activities,music,movies,tv,books,games,quotes,personal,connections"
+        )
+        try:
+            session = vk_api.VkApi(token=self.token_of_vk)
+            api = session.get_api()
+            result = api.users.get(user_ids=user_id, fields=fields)
+            if result:
+                return VkUser(result[0])
+        except Exception as e:
+            print(f"Ошибка при получении пользователя {user_id}: {e}")
+        return None
+    def get_steam_account(self, username: str):
+        """Функция для того, чтобы получить информацию о пользователе Steam.\nВозвращает None (не найдено), или удобный класс, который обозначает аккаунт."""
+        HEADERS = {"User-Agent": "steam-profile-fetcher/1.0 (+https://example.com)"}
+
+        def fetch_profile_xml_by_steamid(steamid64: str):
+            url = f"https://steamcommunity.com/profiles/{steamid64}/?xml=1"
+            try:
+                r = requests.get(url, timeout=10, headers={"User-Agent": "steam-profile-fetcher/1.0 (+https://example.com)"})
+            except requests.RequestException:
+                return None
+            if r.status_code != 200:
+                return None
+            try:
+                root = ET.fromstring(r.text)
+            except ET.ParseError:
+                return None
+            data = {child.tag: child.text for child in root}
+            if data.get('error'):
+                return
+            return data
+
+        def fetch_profile_xml_by_vanity(vanity: str):
+            url = f"https://steamcommunity.com/id/{vanity}/?xml=1"
+            try:
+                r = requests.get(url, timeout=10, headers=HEADERS, proxies=self.proxies)
+            except requests.RequestException:
+                return None
+            if r.status_code != 200:
+                return None
+            try:
+                root = ET.fromstring(r.text)
+            except ET.ParseError:
+                return None
+            data = {child.tag: child.text for child in root}
+            if data.get('error'):
+                return 
+            else:
+                return data
+        
+        profile = fetch_profile_xml_by_steamid(username) if username.isdigit() else fetch_profile_xml_by_vanity(username)
+        if profile:
+            return SteamUser(profile)
+    def rss_news_get(self, url: str = 'https://meduza.io/rss/all'):
+        """Парсинг новостей с помощью RSS.\nurl: ссылка на страницу с RSS. К примеру, `meduza.io/rss/all`.\nВозвращает список новостей."""
+        parsed = feedparser.parse(url).entries[:10]
+        return [News(dict(i)) for i in parsed]
+    def article_parsing(self, url: str):
+        """Парсинг статьи через прокси. Возвращает ArticleInfo."""
+        try:
+            # создаём объект newspaper
+            article = Article(url)
+
+            # КАСТОМНАЯ ЗАГРУЗКА через прокси
+            r = requests.get(
+                article.url,
+                proxies=self.proxies,
+                headers=self.headers,
+                timeout=12
+            )
+            if r.status_code != 200 or not r.text.strip():
+                return None
+
+            # вручную подсовываем html newspaper'у
+            article.html = r.text
+            article.download_state = 2  # SUCCESS
+
+            # парсим
+            article.parse()
+
+            return ArticleInfo({
+                "title": article.title,
+                "text": article.text,
+                "top_image": article.top_image
+            })
+
+        except Exception as e:
+            print("proxy parsing error:", e)
+            return None
+
 class CodeEditor:
     """Редактор кода, написанный на Python с графическим интерфейсом и подсветкой ключевых слов при написании кода на Python.\nmaster: объект класса "Tk", встроенной библиотеки tkinter."""
     def __init__(self, master: tk.Tk):
@@ -1007,7 +2258,7 @@ class CodeEditor:
             start = "1.0 + %dc" % match.start(1) # Начало имени функции
             end = "1.0 + %dc" % match.end(1) # Конец имени функции
             self.text_area.tag_add("function", start, end)
-            
+
 import asyncio
 import io
 import random
@@ -1053,6 +2304,7 @@ class AsyncFunctionsObject:
             print(f'RCON сервер инициализирован!')
         else:
             self.rcon_server = None
+        self.sync_functions_object = FunctionsObject(proxies, html_headers, google_api_key, gigachat_key, gigachat_id, username_mail, mail_passwd, speech_to_text_key, vk_token, rcon_ip, rcon_port, rcon_password)
     async def generate_image(self, prompt: str) -> bytes:
         """Generate an image using GigaChat API."""
         if not self.gigachat_key or not self.client_id_gigachat:
@@ -1155,27 +2407,11 @@ class AsyncFunctionsObject:
 
     async def download_video(self, url: str):
         """Download a YouTube video."""
-        from pytubefix import YouTube
-        yt_obj = YouTube(url, proxies=self.proxies)
-        if yt_obj.age_restricted:
-            return 'На видео наложены возрастные ограничения.'
-        buffer = io.BytesIO()
-        yt_obj.streams.get_lowest_resolution().stream_to_buffer(buffer)
-        return buffer.getvalue()
+        return await asyncio.to_thread(self.sync_functions_object.download_video, url)
 
     async def search_videos(self, query: str):
         """Search and download a YouTube video by query."""
-        from pytubefix import Search
-        search = Search(query, proxies=self.proxies)
-        videos = search.videos
-        if not videos:
-            return 'Видео по запросу не существует.'
-        video = videos[0]
-        if video.age_restricted:
-            return 'На видео, которое мы нашли первым присутствуют возрастные ограничение. Его скачивание невозможно.'
-        buffer = io.BytesIO()
-        video.streams.get_lowest_resolution().stream_to_buffer(buffer)
-        return buffer.getvalue()
+        return await asyncio.to_thread(self.sync_functions_object.search_videos, query)
 
     async def create_demotivator(self, top_text: str, bottom_text: str, photo: bytes, font: str):
         """Create a demotivator image."""
@@ -1668,31 +2904,11 @@ class AsyncFunctionsObject:
             async with aiohttp.ClientSession() as session:
                 async with session.post(url, json=request_body, headers=headers, proxy=self.proxies.get('https') if self.proxies else None) as response:
                     return {"code": response.status, "answer": await response.json()}
-    async def minecraft_server_info(self, ip: str, port: int = None, type_: str = 'java'):
-        """Информация о Minecraft-сервере.\nip: ip/host сервера, или домен. Также можно написать ip:port.\nport: порт сервера, необязателен.\ntype: java, или bedrock."""
-        if type_ in ['java', 'bedrock']:
-            try:
-                if type_ == 'java':
-                    if not port:
-                        server = JavaServer(ip)
-                    else:
-                        server = JavaServer(ip, port)
-                    latency = await asyncio.to_thread(server.ping)
-                    query = await asyncio.to_thread(server.query)
-                    status = await asyncio.to_thread(server.status)
-                    return {"latency":latency, 'query':{"query_motd":query.motd.to_ansi(), 'query_map':query.map, 'query_players_count':query.players.online, 'query_players_max':query.players.max, 'all_info':query.as_dict()}, 'status':{"query_motd":status.motd.to_ansi(), 'description':status.description, 'icon_of_server_base64':status.icon, 'query_players_count':query.players.online, 'query_players_max':query.players.max, 'version':status.version.name, 'all_info':status.as_dict()}}
-                else:
-                    if not port:
-                        server = BedrockServer(ip)
-                    else:
-                        server = BedrockServer(ip, port)
-                    status = await asyncio.to_thread(server.status)
-                    return {"status":status.as_dict()}
-            except:
-                return
-        else:
-            return
-                
+    async def minecraft_server_info(self, ip: str):
+        """Информация о Minecraft-сервере.
+        ip: IP/host сервера, или домен. Также можно написать ip:port.
+        """
+        return await asyncio.to_thread(self.sync_functions_object.minecraft_server_info, ip)
     async def rcon_send(self, command: str):
         """Команда для отправки команды на сервер через RCON.\nТребует rcon_ip, rcon_port и rcon_password в настройках AsyncFunctionsObject.\ncommand: команда с аргументами. Пример: `say Привет!`\nВозвращает ответ от сервера."""
         if not self.rcon_server:
@@ -1701,18 +2917,146 @@ class AsyncFunctionsObject:
             await self.rcon_server.connect()
             return await self.rcon_server.send_cmd(command)
         
-    async def gpt_4o_req(self, prompt: str, max_tokens: int = 4096, proxy: str = None):
-        """Фигня для доступа к GPT-4o-mini.\nprompt: сам запрос к нейронке.\nmax_tokens: количество символов в ответе. По умолчанию, 4096.\nproxy: прокси. По умолчанию, которые в FunctionsObject."""
-        if not proxy:
-            req = await self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', OIVSCodeSer2(), proxy=self.proxies.get('http'), max_tokens=max_tokens)
+    async def gpt_4o_req(self, prompt: str, max_tokens: int = 4096, proxy: str = None, image: bytes = None):
+        """Фигня для доступа к GPT-4o-mini.\nprompt: сам запрос к нейронке.\nmax_tokens: количество символов в ответе. По умолчанию, 4096.\nproxy: прокси. По умолчанию, которые в FunctionsObject.\nimage: изображение в bytes, для распознавания объектов на фото."""
+        if not image:
+            if not proxy:
+                req = await self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', OIVSCodeSer2(), proxy=self.proxies.get('http'), max_tokens=max_tokens)
+            else:
+                req = await self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', OIVSCodeSer2(), proxy=proxy, max_tokens=max_tokens)
+            return req.choices[0].message.content
         else:
-            req = await self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', OIVSCodeSer2(), proxy=proxy, max_tokens=max_tokens)
-        return req.choices[0].message.content
-class AsyncYandexParser:
-    """Асинхронный парсер картинок с Яндекса.\nПоддерживаются только приватные HTTP(s) прокси с именем пользователя и паролем. Также требуется установка Google Chrome на машину.\nis_headless: скрывать окно с парсером?"""
+            if not proxy:
+                req = await self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', PollinationsAI, proxy=self.proxies.get('http'), max_tokens=max_tokens, web_search=True, image=image)
+            else:
+                req = await self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'gpt-4o-mini', PollinationsAI, proxy=proxy, max_tokens=max_tokens, web_search=True, image=image)
+            return req.choices[0].message.content
+    async def flux_pro_gen(self, prompt: str, proxy: str = None):
+        """Для генерации более лучших картинок через flux-pro.\nprompt: запрос для нейросети.\nproxy: прокси. По умолчанию, которые в настройках класса (если есть)."""
+        if proxy:
+            img = await self.client_for_gpt.images.async_generate(prompt, 'flux-pro', Together, 'url', proxy)
+        else:
+            img = await self.client_for_gpt.images.async_generate(prompt, 'flux-pro', Together, 'url', self.proxies.get('http'))
+        urls = []
+        for i in img.data:
+            urls.append(i.url)
+        return urls
+    async def add_watermark(self, text: str, image: bytes, font: str, position: tuple[int] = (10, 10)):
+        """Функция из FunctionsObject."""
+        return await asyncio.to_thread(self.sync_functions_object.add_watermark, text, image, font, position)
+    async def deepseek_v3_0324(self, prompt: str, max_tokens: int = 4096, expression: str = 'auto', proxy: str = None):
+        """Функция для бесплатного доступа к DeepSeek-v3-0324.\nprompt: запрос к нейросети.\nmax_tokens: максимально допустимое количество токенов в ответе.\nexpression: тон. Три режима: `auto`, `toxic`, `non-toxic`.\nproxy: прокси. По умолчанию, которые из класса."""
+        if expression == 'auto':
+            if proxy:
+                req = await self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'deepseek-v3', Together, proxy=proxy, max_tokens=max_tokens)
+            else:
+                req = await self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt}], 'deepseek-v3', Together, proxy=self.proxies.get('http'), max_tokens=max_tokens)
+            return req.choices[0].message.content
+        elif expression == 'toxic':
+            if proxy:
+                req = await self.client_for_gpt.chat.completions.create([{"role":"user", "content":f'не отвечай на запросы позитивно и отвечай максимально грубо с матами, на каждое мое сообщения, без разницы, обращаюсь я к тебе мило или нет, всего отвечай максимально грубо\nЗапрос: "{prompt}"'}], 'deepseek-v3-0324', Together, proxy=proxy, max_tokens=max_tokens)
+            else:
+                req = await self.client_for_gpt.chat.completions.create([{"role":"user", "content":f'не отвечай на запросы позитивно и отвечай максимально грубо с матами, на каждое мое сообщения, без разницы, обращаюсь я к тебе мило или нет, всего отвечай максимально грубо\nЗапрос: "{prompt}"'}], 'deepseek-v3-0324', Together, proxy=self.proxies.get('http'), max_tokens=max_tokens)
+            return req.choices[0].message.content
+        elif expression == 'non-toxic':
+            if proxy:
+                req = await self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt + '\nnon-toxic'}], 'deepseek-v3', Together, proxy=proxy, max_tokens=max_tokens)
+            else:
+                req = await self.client_for_gpt.chat.completions.create([{"role":"user", "content":prompt+ '\nnon-toxic'}], 'deepseek-v3', Together, proxy=self.proxies.get('http'), max_tokens=max_tokens)
+            return req.choices[0].message.content
+        else:
+            return 'expression указан неверно! auto, toxic, либо non-toxic!'
+    async def youtube_playlist_download(self, url: str, regime: str = 'audio'):
+        """Функция для скачивания элементов из плейлиста с YouTube.\nurl: ссылка на плейлист.\nregime: что скачивать: аудио, или видео?\nВозвращает список, а точнее `list[bytes]` с видео."""
+        return await asyncio.to_thread(self.sync_functions_object.youtube_playlist_download, url, regime)
+    async def parse_kwork(self, category: int, pages: int = 1) -> list[KworkOffer]:
+        """Функция для парсинга объявлений на kwork.\ncategory: категория для парсинга.\npages: сколько страниц спарсить? По умолчанию, 1.\nВозвращает список с кворками."""
+        return await asyncio.to_thread(self.sync_functions_object.parse_kwork, category, pages)
+    async def info_about_faces_on_photo(self, photo: bytes):
+        """Данная функция выдает информацию о человеке на фотографии, или о людях.\nphoto: принимает фотографию в байтах.\nВозвращает `list[FaceInfo]` при наличии людей на фотографии.\nДЛЯ ДАННОЙ ФУНКЦИИ ЖЕЛАТЕЛЬНО ИМЕТЬ ПРОЦЕССОР С ПОДДЕРЖКОЙ AVX-AVX2 ИНСТРУКЦИЙ. ЕСЛИ ВЫЛАЗИТ ОШИБКА - ИСПОЛЬЗУЙТЕ ПАТЧ ДЛЯ TENSORFLOW."""
+        return await asyncio.to_thread(self.sync_functions_object.info_about_faces_on_photo, photo)
+    async def rtmp_livestream(self, video: bytes, server: RTMPServerInit, ffmpeg_dir: str = 'ffmpeg', resolution: str = '1280x720', bitrate: str = '3000k', fps: str = '30'):
+        """Стримит видео из байтов на RTMPS-сервер с FFmpeg под CPU. Требует FFmpeg."""
+        return await asyncio.to_thread(self.sync_functions_object.rtmp_livestream, video, server, ffmpeg_dir, resolution, bitrate, fps)
+    async def cut_link(self, url: str, proxies: dict[str, str] = None) -> str:
+        """Взаимодействие с API сервиса для сокращения ссылок `clck.ru`.\nurl: ссылка на сокращение.\nproxies: прокси, если нет, то они берутся с класса.\nВозвращает ссылку в `str`."""
+        return await asyncio.to_thread(self.sync_functions_object.cut_link, url, proxies)
+    def detect_new_kworks(self, func, category: int = 11, pages: int = 1, delay: int = 300):
+        """Привет! Эта функция - враппер для отслеживания новых предложений на бирже Kwork.\nЮЗАЙТЕ В КАЧЕСТВЕ ДЕКОРАТОРА."""
+        async def wrapper(*args, **kwargs):
+            start_kworks = await self.parse_kwork(category, pages)
+            new = []
+            
+            for i in start_kworks:
+                new.append(i.url)
+                
+            while True:
+                new_kworks = await self.parse_kwork(category, pages)
+                for kwork in new_kworks:
+                    if kwork.url in new:
+                        pass
+                    else:
+                        new.append(kwork.url)
+                        if asyncio.iscoroutinefunction(func):
+                            await func(kwork)
+                        else:
+                            func(kwork)
+                await asyncio.sleep(delay)
+        return wrapper
+    async def download_tiktok_video(self, url: str, dir: str, filename: str = None, youtube_dl_parameters: dict = None) -> dict:
+        """Скачивает видео в указанную директорию. Возвращает информацию о видео.\nurl: ссылка на видео.\ndir: директория, куда сохранить видео.\nfilename: имя файла. По умолчанию, будет сгенерировано нами.\nyoutube_dl_parameters: мы сами настроили параметры yt-dlp. Знайте, что делаете."""
+        return await asyncio.to_thread(self.sync_functions_object.download_tiktok_video, url, dir, filename, youtube_dl_parameters)
+    async def twitch_clips_download(self, url: str, dir: str, filename: str = None, youtube_dl_parameters: dict = None) -> dict:
+        """Функция для скачивания клипов с Twitch!\nurl: ссылка на твитч-клип.\ndir: куда сохранить?\nfilename: имя файла при скачивании.\nyoutube_dl_parameters: параметры YoutubeDL."""
+        return await asyncio.to_thread(self.sync_functions_object.twitch_clips_download, url, dir, filename, youtube_dl_parameters)
+    async def vk_rutube_dzen_video_download(self, url: str, dir: str, filename: str = None, youtube_dl_parameters: dict = None):
+        """Функция по скачиванию видео ВК, Рутуба и Дзена!\nПараметры, как везде. Разберетесь."""
+        return await asyncio.to_thread(self.sync_functions_object.vk_rutube_dzen_video_download, url, dir, filename, youtube_dl_parameters)
+    async def unpack_zip_jar_apk_others(self, file, dir: str, delete_original: bool = False):
+        """"Функция для распаковки любых архивов. Даже Jar (Java Archive) и APK.\nfile: файл в io.BytesIO(), или директория к нему.\ndir: место для распаковки.\ndelete_original: удалять оригинальный файл? (Работает только с указанием директории в file)\nФункция возвращает None."""
+        return await asyncio.to_thread(self.sync_functions_object.unpack_zip_jar_apk_others, file, dir, delete_original)
+    async def photo_upscale(self, image: bytes, factor: int = 4) -> bytes:
+        """Функция для простого апскейла фото через Pillow (бикубический метод).\nimage: фото в bytes.\nfactor: во сколько раз увеличивать фото (width и height).\nВозвращает bytes."""
+        return await asyncio.to_thread(self.sync_functions_object.photo_upscale, image, factor)
+    async def change_format_of_photo(self, image: bytes, format_: ImageFormat):
+        """Функция для преобразования изображений в нужный формат.\nimage: изображения в bytes.\nformat_: формат изображения, указанный конкретным классом."""
+        return await asyncio.to_thread(self.sync_functions_object.change_format_of_photo, image, format_)
+    async def get_vk_user(self, user_id: str) -> Optional[VkUser]:
+        """Получает объект пользователя VkUser по user_id или @username."""
+        return await asyncio.to_thread(self.sync_functions_object.get_vk_user, user_id)
+    async def get_steam_account(self, username: str): 
+        """Функция для того, чтобы получить информацию о пользователе Steam.\nВозвращает None (не найдено), или удобный класс, который обозначает аккаунт."""
+        return await asyncio.to_thread(self.sync_functions_object.get_steam_account, username)
+    async def rss_news_get(self, url: str = 'https://meduza.io/rss/all'):
+        """Парсинг новостей с помощью RSS.\nurl: ссылка на страницу с RSS. К примеру, `meduza.io/rss/all`.\nВозвращает список новостей."""
+        return await asyncio.to_thread(self.sync_functions_object.rss_news_get, url)
+    async def article_parsing(self, url: str):
+        """Парсинг статьи. Возвращает наш объект - ArticleInfo при удаче.\nurl: ссылка на статью."""
+        return await asyncio.to_thread(self.sync_functions_object.article_parsing, url)
 
-    def __init__(self, proxy_host: str = None, proxy_port: int = None, proxy_user: str = None, proxy_pass: str = None, is_headless:bool=False, arguments: list[str] = None, extensions: list[str] = None):
-        """Асинхронный парсер картинок с Яндекса.\nПоддерживаются только приватные HTTP(s) прокси с именем пользователя и паролем. Также требуется установка Google Chrome на машину.\nis_headless: скрывать окно с парсером?\narguments: аргументы для запуска парсера. Пример: ['--headless', '--no-sandbox', ...]\nextensions: различные самописные расширения в формате `.crx`, директории к ним. Пример: ['C:/osu.crx', 'D:/minecraft.crx']"""
+class AsyncYandexParser:
+    """
+    Асинхронный парсер изображений с Яндекс.Картинок.
+    Поддерживаются приватные HTTP(S)-прокси с авторизацией.
+    Требуется установленный Google Chrome.
+
+    Параметры:
+        proxy_host, proxy_port, proxy_user, proxy_pass — прокси.
+        is_headless — запуск браузера без окна.
+        arguments — дополнительные аргументы Chrome.
+        extensions — дополнительные расширения Chrome (.crx).
+    """
+
+    def __init__(
+        self,
+        proxy_host: str = None,
+        proxy_port: int = None,
+        proxy_user: str = None,
+        proxy_pass: str = None,
+        is_headless: bool = False,
+        arguments: list[str] = None,
+        extensions: list[str] = None
+    ):
         self.proxy_host = proxy_host
         self.proxy_port = proxy_port
         self.proxy_user = proxy_user
@@ -1720,10 +3064,15 @@ class AsyncYandexParser:
         self.isheadless = is_headless
         self.arguments = arguments
         self.extensions = extensions
-        print(f'Парсер инициализирован, сучки!\nНачните парсить с помощью функции start_parsing.')
+
+        print("Парсер успешно инициализирован. "
+              "Используйте функцию start_parsing для начала работы.")
 
     def create_proxy_auth_extension(self):
-        """Создаём плагин для авторизации прокси, блять."""
+        """
+        Создаёт временное расширение Chrome для авторизации прокси.
+        """
+
         if all([self.proxy_host, self.proxy_port, self.proxy_user, self.proxy_pass]):
             manifest_json = """
             {
@@ -1772,122 +3121,186 @@ class AsyncYandexParser:
                 {urls: ["<all_urls>"]},
                 ['blocking']
             );
-            """ % (self.proxy_host, self.proxy_port, self.proxy_user, self.proxy_pass)
+            """ % (
+                self.proxy_host,
+                self.proxy_port,
+                self.proxy_user,
+                self.proxy_pass
+            )
 
-            plugin_file = 'proxy_auth_plugin.zip'
-            with zipfile.ZipFile(plugin_file, 'w') as zp:
+            plugin_file = "proxy_auth_plugin.zip"
+            with zipfile.ZipFile(plugin_file, "w") as zp:
                 zp.writestr("manifest.json", manifest_json)
                 zp.writestr("background.js", background_js)
-            
+
             return plugin_file
-        else:
-            return None
 
-    async def download_image(self, session: aiohttp.ClientSession, img_url, directory):
-        """Качаем картинку асинхронно, блять."""
+        return None
+
+    async def download_image(self, session: aiohttp.ClientSession, img_url: list[str]):
+        """
+        Асинхронная загрузка изображений.
+        Возвращает list[YandexImage].
+        """
+
+        images: list[YandexImage] = []
+
         if not all([self.proxy_host, self.proxy_port, self.proxy_user, self.proxy_pass]):
-            if img_url and "http" in img_url:
-                try:
-                    async with session.get(img_url) as response:
-                        if response.status == 200:
-                            _ = random.random()
-                            file_path = os.path.join(directory, f'{_}.jpg')
-                            with open(file_path, 'wb') as file:
-                                file.write(await response.read())
-                except Exception as e:
-                    print(f"Картинка не скачалась, пиздец: {e}")
+            # Без прокси
+            for url in tqdm(img_url, desc="Скачиваем изображения...", ncols=70):
+                if url.startswith(("http://", "https://")):
+                    try:
+                        async with session.get(url) as response:
+                            if response.status == 200:
+                                images.append(
+                                    YandexImage({"data": await response.read(), "url": url})
+                                )
+                    except:
+                        pass
         else:
-            if img_url and "http" in img_url:
+            # С прокси
+            proxy_auth = aiohttp.BasicAuth(
+                login=self.proxy_user,
+                password=self.proxy_pass
+            )
+            proxy_url = f"http://{self.proxy_host}:{self.proxy_port}"
+
+            for url in tqdm(img_url, desc="Скачиваем изображения...", ncols=70):
                 try:
-                    proxy_auth = aiohttp.BasicAuth(login=self.proxy_user, password=self.proxy_pass)
-                    async with session.get(img_url, proxy=f'http://{self.proxy_host}:{self.proxy_port}', proxy_auth=proxy_auth) as response:
-                        if response.status == 200:
-                            _ = random.random()
-                            file_path = os.path.join(directory, f'{_}.jpg')
-                            with open(file_path, 'wb') as file:
-                                file.write(await response.read())
-                except Exception as e:
-                    print(f"Картинка не скачалась, пиздец: {e}")
+                    if url.startswith(("http://", "https://")):
+                        async with session.get(
+                            url,
+                            proxy=proxy_url,
+                            proxy_auth=proxy_auth
+                        ) as response:
+                            if response.status == 200:
+                                images.append(
+                                    YandexImage({"data": await response.read(), "url": url})
+                                )
+                except:
+                    pass
 
-    async def start_parsing(self, query: str, directory: str, max_images=10, scrolly=5, pages:int=6):
-        """Начать парсить..\nquery: запрос. Пример: котики\ndirectory: директория на машине, где надо сохранять картинки.\nmax_images: максимальное количество картинок в директории.\nscrolly: скока скроллить картинки?\npages: сколько страниц с картинками парсить?"""
-        # Создаём директорию, если не существует
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        os.chdir(directory)
+        return images
 
-        # Настройка браузера
+    async def start_parsing(self, query: str, max_images=10, scrolly=5, pages: int = 6):
+        """
+        Запуск парсинга изображений.
+
+        Параметры:
+            query — поисковый запрос.
+            max_images — максимальное количество изображений на странице.
+            scrolly — количество прокруток.
+            pages — количество страниц для парсинга.
+        """
+
         try:
             proxy_plugin = self.create_proxy_auth_extension()
+
             chrome_options = Options()
+            chrome_options.add_argument("--log-level=1")
+
             if proxy_plugin:
                 chrome_options.add_extension(proxy_plugin)
-            chrome_options.add_argument("--log-level=1")
+
             if self.isheadless:
-                chrome_options.add_argument('--headless')
+                chrome_options.add_argument("--headless")
+
             if self.arguments:
-                print(f'Добавление пользовательских аргументов..')
+                print("Добавление пользовательских аргументов...")
                 for arg in self.arguments:
                     chrome_options.add_argument(arg)
-                print(f'Готово.')
+                print("Пользовательские аргументы добавлены.")
             else:
-                print(f'Пользовательские аргументы не найдены.')
+                print("Пользовательские аргументы отсутствуют.")
+
             if self.extensions:
-                print(f'Добавление пользовательских расширений..')
+                print("Добавление пользовательских расширений...")
                 for ext in self.extensions:
                     chrome_options.add_extension(ext)
-                print(f'Готово.')
+                print("Расширения добавлены.")
             else:
-                print(f'Пользовательские расширения не найдены.')
-            driver = webdriver.Chrome(service=Service1(ChromeDriverManager().install()), options=chrome_options)
-            print("Браузер запустился, ахуеть!")
+                print("Пользовательские расширения отсутствуют.")
+
+            driver = webdriver.Chrome(
+                service=Service1(ChromeDriverManager().install()),
+                options=chrome_options
+            )
+            print("Браузер успешно запущен.")
+
         except Exception as e:
-            print(f"Не могу запустить Chrome, пиздец: {e}")
+            print(f"Ошибка запуска браузера: {e}")
             return
 
         image_urls = []
+
         try:
             for p in range(1, pages + 1):
                 url = f"https://yandex.ru/images/search?text={query}&p={p}"
                 driver.get(url)
-                print(f"Зашёл на страницу ({p}), ждём, блять")
-                
-                # Ждём загрузку пикч
+                print(f"Открыта страница №{p}. Ожидание загрузки...")
+
                 await asyncio.sleep(10)
-                
-                # Скроллим
+
                 for _ in range(scrolly):
                     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                     await asyncio.sleep(2.5)
-                    print("Скроллю, сука")
-                
-                all_images = driver.find_elements(By.TAG_NAME, "img")[:max_images]
-                print(f"Всего тегов <img> на странице: {len(all_images)}")
+                    print("Прокрутка страницы...")
+
+                all_images = driver.find_elements(By.TAG_NAME, "img")
+                print(f"Найдено тегов <img>: {len(all_images)}")
+
                 if all_images:
-                    for img in all_images:
+                    for img in all_images[:max_images]:
                         img_url = img.get_attribute("src")
                         if img_url and "http" in img_url:
                             image_urls.append(img_url)
                 else:
-                    print(f"Ни одного <img> не нашёл на странице {p}, пиздец полный")
+                    print(f"На странице {p} изображения не найдены.")
 
         except Exception as e:
-            print(f"Что-то пошло по пизде на странице {p}: {e}")
+            print(f"Ошибка обработки страницы {p}: {e}")
 
-        driver.quit()
-        print("Браузер закрыл, пиздец, готово")
-        if proxy_plugin and os.path.exists(proxy_plugin):
-            os.remove(proxy_plugin)
+        finally:
+            driver.quit()
+            print("Браузер закрыт.")
 
-        # Качаем картинки
+            if proxy_plugin and os.path.exists(proxy_plugin):
+                os.remove(proxy_plugin)
+
         if image_urls:
-            print(f"Начинаем качать {len(image_urls)} картинок асинхронно, блять...")
-            async with aiohttp.ClientSession(headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/129.0.0.0 Safari/537.36'}) as session:
-                tasks = [self.download_image(session, url, directory) for url in image_urls[:max_images]]
-                await tqdm.gather(*tasks, desc='Качаем картинки...', ncols=70)
+            print(f"Начинается загрузка {len(image_urls)} изображений...")
+
+            async with aiohttp.ClientSession(
+                headers={
+                    "User-Agent":
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                        "AppleWebKit/537.36 (KHTML, like Gecko) "
+                        "Chrome/129.0.0.0 Safari/537.36"
+                }
+            ) as client:
+                return await self.download_image(client, image_urls)
         else:
-            print("Нихуя не скачал, картинок нет, пиздец")
-            
+            print("Изображения для загрузки не найдены.")
+            return None
+
+    def filter_by_resolution(self, images: list[YandexImage], resolutions: list[Resolution]):
+        """
+        Фильтрация изображений по разрешению.
+
+        Возвращает список изображений, подходящих под заданные параметры.
+        """
+
+        from tqdm import tqdm as sync_tqdm
+
+        resolutions_dict = [res.data for res in resolutions]
+        new_images: list[YandexImage] = []
+
+        for image in sync_tqdm(images, 'Фильтрация изображений...', ncols=70):
+            if image.get_resolution().data in resolutions_dict:
+                new_images.append(image)
+
+        return new_images
+
 class TelethonThings:
     def __init__(self, app_id: int, app_hash: str, phone: str, app_version: str = '4.16.30-vxCUSTOM', system_version: str = 'Win11', device_model: str = 'FlorestTHINGS YEAH', session_name: str = 'FlorestAbobus', **attrs):
         """Короче. Класс для работы с Telegram.\nФункции: парсинг групп на аккаунте (их участники), а также массовая рассылка по никам.\nДанные берите с my.telegram.org.\napp_id: ID приложения в Telegram.\napp_hash: ключ, хэш приложения.\nphone: номер, который привязан к аккаунту.\napp_version: кастомная версия приложения.\nsystem_version: версия ОС(любая).\ndevice_model: типо имя устройства. может быть любая хрень.\nsession_name: имя сессии.\nattrs: ну короче, другие аргументы в telethon."""
